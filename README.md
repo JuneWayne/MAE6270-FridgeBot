@@ -1,2 +1,3 @@
 # MAE6270-FridgeBot
-FridgeBot Code Base
+---
+Team Members: Ethan Cao, Eric He, Ray Fang, Katherine Craig
