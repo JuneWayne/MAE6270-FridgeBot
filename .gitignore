@@ -1,0 +1,4 @@
+# Keep generated Python bytecode out of commits
+__pycache__/
+*.pyc
+*.pyo
