@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>RobotheelControl</string>
+   <string>Robot wheel control</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -32,20 +32,20 @@
     <item row="1" column="0">
      <widget class="QSpinBox" name="LeftValue">
       <property name="minimum">
-       <number>-100</number>
+       <number>-400</number>
       </property>
       <property name="maximum">
-       <number>100</number>
+       <number>400</number>
       </property>
      </widget>
     </item>
     <item row="1" column="1">
      <widget class="QSlider" name="LeftSlider">
       <property name="minimum">
-       <number>-100</number>
+       <number>-400</number>
       </property>
       <property name="maximum">
-       <number>100</number>
+       <number>400</number>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -55,20 +55,20 @@
     <item row="1" column="2">
      <widget class="QSpinBox" name="RightValue">
       <property name="minimum">
-       <number>-100</number>
+       <number>-400</number>
       </property>
       <property name="maximum">
-       <number>100</number>
+       <number>400</number>
       </property>
      </widget>
     </item>
     <item row="1" column="3">
      <widget class="QSlider" name="RightSlider">
       <property name="minimum">
-       <number>-100</number>
+       <number>-400</number>
       </property>
       <property name="maximum">
-       <number>100</number>
+       <number>400</number>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>

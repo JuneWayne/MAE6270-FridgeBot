@@ -1,39 +1,34 @@
-"""
-loads gui 
-reset control slider values to zero when pressing stop button
-"""
-
-from pathlib import Path
 import sys
 
-from PyQt5 import uic
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QApplication, QMainWindow
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from PyQt5.QtWidgets import QApplication
+
+from wheel_control.gui_node import GuiNode
+from wheel_control.wheel_control_window import WheelControlWindow
 
 
-class WheelControlWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        uic.loadUi(str(Path(__file__).with_name("week7_gui.ui")), self)
-        self.StopButton.clicked.connect(self.stop_controls)
-        self.statusbar.showMessage("Motor interface: not connected")
-
-    @pyqtSlot()
-    # define function that sets all speed values to zero
-    def stop_controls(self):
-        self.LeftValue.setValue(0)
-        self.RightValue.setValue(0)
-        self.statusbar.showMessage(
-            "wheel speed set to zero"
-        )
-
-
-def main():
-    app = QApplication(sys.argv)
-    window = WheelControlWindow()
-    window.show()
-    return app.exec_()
+# This launcher starts Qt, creates the GUI node, and connects the window to that node
+# The window layout and control logic live in separate files so this entry point stays small
+def main(args=None):
+    rclpy.init(args=args)
+    # Keep ROS command-line arguments away from the Qt argument parser
+    app = QApplication([sys.argv[0]])
+    node = GuiNode()
+    window = None
+    try:
+        window = WheelControlWindow(node)
+        window.show()
+        return app.exec_()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        return 0
+    finally:
+        # Close the window before destroying its publisher so normal shutdown can send zero
+        if window is not None:
+            window.close()
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == '__main__':
+    raise SystemExit(main())
