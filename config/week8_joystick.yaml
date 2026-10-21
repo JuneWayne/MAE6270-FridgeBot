@@ -1,0 +1,23 @@
+# Apply these settings to the joystick node
+/joystick_teleop:
+
+  # Set the ROS parameter values
+  ros__parameters:
+
+    # Select the second axes value for forward and backward input
+    linear_axis: 1
+
+    # Select the first axes value for left and right input
+    angular_axis: 0
+
+    # Set the example full-stick forward speed request in m/s
+    linear_scale: 0.025
+
+    # Set the example full-stick turn rate request in rad/s
+    angular_scale: 0.11
+
+    # Publish five velocity messages per second
+    update_rate: 5.0
+
+    # Send zero at the next update after joystick input stops for 0.25 seconds
+    joy_timeout: 0.25
