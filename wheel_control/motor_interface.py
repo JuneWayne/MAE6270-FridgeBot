@@ -1,7 +1,9 @@
 import time
+import math
 
 from rclpy.node import Node
 from std_msgs.msg import String
+from geometry_msgs.msg import Twist
 import serial
 
 from .format_motor_command import format_motor_command
@@ -14,6 +16,10 @@ from .parse_motor_command import parse_motor_command
 class MotorInterface(Node):
     def __init__(self):
         super().__init__('motor_interface')
+        self.wheel_radius = 0.075
+        self.wheel_separation = 0.443
+        self.gear_ratio = 504.0
+        self.max_wheel_rad_s = 10.0 * 2.0 * math.pi /60.0
         self.declare_parameter('port', MotorSettings.DEFAULT_PORT)
         self.connection = None
         self.targets = (0, 0)
@@ -32,34 +38,42 @@ class MotorInterface(Node):
 
         # Advertise the subscriber only after the serial port is ready and drive is zero
         self.subscription = self.create_subscription(
-            String, MotorSettings.TOPIC, self.receive_command, 1
+            Twist, '/cmd_vel', self.receive_command, 1
         )
         self.timer = self.create_timer(MotorSettings.COMMAND_PERIOD_SECONDS, self.update)
         self.get_logger().info(f'Ready on {port}; waiting for {MotorSettings.TOPIC}')
 
     def receive_command(self, message):
-        try:
-            targets = parse_motor_command(message.data)
-        except ValueError as error:
-            # Invalid input removes drive instead of leaving a previous moving command active
-            self.targets = (0, 0)
-            self.last_command = None
-            self.write_targets()
-            self.get_logger().warning(f'{error}; both commands are zero')
-            return
+        v = message.linear.x
+        omega = message.angular.z
 
-        if self.last_command is None or targets != self.targets:
-            self.get_logger().info(f'Command: {format_motor_command(*targets)}')
-        self.targets = targets
-        self.last_command = time.monotonic()
-        # Forward fresh targets immediately, including the zero pair from the Stop button
-        self.write_targets()
+        # Set both wheel speeds based on linear and angular velocity
+        right = (v + (self.wheel_separation / 2.0) * omega) / self.wheel_radius
+        left = (v - (self.wheel_separation / 2.0) * omega) / self.wheel_radius
+       
+        # Limit wheel speeds to 10 RPM
+        peak = max(abs(left), abs(right))
+        if peak > self.max_wheel_rad_s:
+            scale = self.max_wheel_rad_s / peak
+            left *= scale
+            right *= scale
+            
+        # Convert wheel angular velocity (rad/s) to RPM
+        left_rpm = left * 60.0 / (2.0 * math.pi)
+        right_rpm = right * 60.0 / (2.0 * math.pi)
 
-    def write_targets(self):
-        # ROS String has no newline requirement but the Arduino waits for one
-        data = (format_motor_command(*self.targets) + '\n').encode('ascii')
-        if self.connection.write(data) != len(data):
-            raise serial.SerialException('Incomplete serial write')
+        # Scale RPM relative to the rated maximum wheel speed
+        max_rpm = 13.5
+        max_command = MotorSettings.MAX_COMMAND
+
+        self.targets = (
+            round(left_rpm / max_rpm * max_command),
+            round(right_rpm / max_rpm * max_command),
+        )
+
+       self.last_command = time.monotonic()
+       self.write_targets()
+           
 
     def update(self):
         # Do not repeat an old moving command after the GUI or network disappears
