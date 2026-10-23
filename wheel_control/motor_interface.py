@@ -59,7 +59,7 @@ class MotorInterface(Node):
 
         # Calculate wheel speed requests in rad/s from robot speed and turn rate
         right = (v + (self.wheel_separation / 2.0) * omega) / self.wheel_radius
-        left = (v - (self.wheel_separation / 2.0) * omega) / self.wheel_radius
+        left = -(v - (self.wheel_separation / 2.0) * omega) / self.wheel_radius
 
         # Invalid or overflowing input must remove drive instead of crashing the callback
         if not math.isfinite(left) or not math.isfinite(right):
