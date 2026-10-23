@@ -1,100 +1,178 @@
 # MAE6270-FridgeBot
----
-Team Roster: Ethan Cao, Eric He, Ray Fang, Katherine Craig
----
-## Fridgey:
-- Meet fridgey, a teleoperated four wheeled robot via ROS2 software
-![robotPhoto](miscellaneous/fridgey.jpg)
 
-## Week 7 wheel motor control
+Team: Ethan Cao, Eric He, Ray Fang, Katherine Craig
 
-The base station runs `/week7_gui`. The robot computer runs `/motor_interface`.
-The GUI publishes `std_msgs/msg/String` messages on `/motor_cmd`.
-The robot node subscribes to this topic and forwards commands to the Arduino through USB serial at 115200 baud.
-The Arduino program is not a ROS 2 node.
+Fridgey is a four-wheel robot controlled through ROS 2.
 
-```mermaid
-flowchart LR
-    GUI["/week7_gui<br/>Base station"] -->|"/motor_cmd<br/>std_msgs/msg/String"| Bridge["/motor_interface<br/>Robot computer"]
-    Bridge -->|"USB serial<br/>115200 baud"| Arduino["Arduino Uno<br/>VNH5019 shield"]
-    Arduino --> Left["M1: left motor"]
-    Arduino --> Right["M2: right motor"]
+![Fridgey](miscellaneous/fridgey.jpg)
+
+## Prepare the computers
+
+1. Use Ubuntu with ROS 2 Jazzy on both computers.
+2. Put the current project files in `~/human_machine_interface` on both computers.
+3. Connect both computers to the same Wi-Fi network.
+4. Connect the joystick to the base computer.
+5. Connect the Arduino to the robot computer through USB.
+6. Set the joystick to its centre position.
+7. Stop previous copies of the joystick and motor programs.
+
+For WSL, attach the joystick USB device to Ubuntu before you continue.
+The network must permit ROS 2 traffic between the computers.
+
+## Install the required packages
+
+Run once on the **base computer**:
+
+```bash
+sudo apt update
+sudo apt install ros-jazzy-joy
 ```
 
-### Source files
+Run once on the **robot computer**:
 
-Each class and shared function has its own Python module. Methods stay with their class.
+```bash
+sudo apt update
+sudo apt install python3-serial
+```
 
-| File | Purpose |
-|---|---|
-| `week7_gui.py` | Start the GUI application |
-| `robot_motor.py` | Start the robot interface node |
-| `wheel_control/gui_node.py` | Define the GUI publisher node |
-| `wheel_control/wheel_control_window.py` | Load the Designer form and handle controls |
-| `wheel_control/motor_interface.py` | Define the ROS-to-serial interface node |
-| `wheel_control/motor_settings.py` | Define the shared settings class |
-| `wheel_control/parse_motor_command.py` | Check command syntax and limits |
-| `wheel_control/format_motor_command.py` | Build a command containing both motor values |
-| `week7_gui.ui` | Store the visual layout from Qt Designer |
-| `week7_motor_control/week7_motor_control.ino` | Run the Arduino motor controller |
+## Prepare the Arduino
 
-### Command format
+Skip the upload if the correct program is already installed.
 
-Use `M <left> <right>`. For example, `M 100 -100` requests opposite drive directions.
-Each value must be between -400 and 400. These are motor drive commands, not angles or measured RPM.
-`M 0 0` removes drive from both motors. The wheels can coast; this command does not apply active braking.
-M1 controls the left side and M2 controls the right side.
-The Arduino direction constants can reverse either side if its wiring requires that change.
+1. Stop `robot_motor.py` before an upload.
+2. Close **Serial Monitor**.
+3. Close **Serial Plotter**.
+4. Install `DualVNH5019MotorShield` through Arduino IDE Library Manager, if necessary.
+5. Open `week7_motor_control/week7_motor_control.ino`.
+6. Select **Arduino Uno**.
+7. Select the Arduino USB port.
+8. Click **Upload**.
+9. Wait for a successful upload before you continue.
 
-### Arduino setup
+## Check the devices
 
-1. Keep the wheels clear of the floor for the first test.
-2. Install the Pololu `DualVNH5019MotorShield` library through Arduino IDE Library Manager.
-3. Open `week7_motor_control/week7_motor_control.ino`.
-4. Select the Arduino Uno and its port.
-5. Upload the program.
-6. Set Serial Monitor to 115200 baud and Newline.
-7. Send `M 0 0`. The response must be `OK`.
-8. Close Serial Monitor before starting the robot node.
-
-### Robot computer
-
-Copy `robot_motor.py` and the complete `wheel_control` folder to the robot computer.
-Install `python3-serial` if necessary. Run these commands from the repository folder:
+On the **base computer**, list the joystick devices:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
+ros2 run joy joy_enumerate_devices
+```
+
+Record the joystick ID. Replace `device_id:=0` below if the ID differs.
+If the list is empty, correct the device connection or permissions before you continue.
+
+On the **robot computer**, list the serial ports:
+
+```bash
+python3 -m serial.tools.list_ports -v
+```
+
+Find the Arduino port. Replace `/dev/ttyACM0` below if the port differs.
+
+## Start the system
+
+Use four terminals. Keep each program running.
+Use `ROS_DOMAIN_ID=3` in every ROS terminal.
+
+### Robot computer — Terminal 1: motor interface
+
+```bash
+cd ~/human_machine_interface
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=3
+unset ROS_LOCALHOST_ONLY
+export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
 python3 robot_motor.py --ros-args -p port:=/dev/ttyACM0
 ```
 
-Replace `/dev/ttyACM0` with the actual Arduino port if necessary.
+Wait for `Ready on /dev/ttyACM0; waiting for /cmd_vel`.
+The port name can differ.
 
-### Base station
-
-Keep `week7_gui.py`, `week7_gui.ui`, and the complete `wheel_control` folder together.
-Install `python3-pyqt5` if necessary. Run these commands from the repository folder:
+### Base computer — Terminal 1: joystick driver
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-python3 week7_gui.py
+export ROS_DOMAIN_ID=3
+unset ROS_LOCALHOST_ONLY
+export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+ros2 run joy joy_node --ros-args -p device_id:=0 -p autorepeat_rate:=20.0 -p deadzone:=0.10
 ```
 
-Use the same team `ROS_DOMAIN_ID` on both computers and in each terminal.
-Both computers must be on a network that permits ROS 2 discovery and topic traffic.
-The GUI enables its controls when it discovers the robot subscriber.
-The controls return to zero when that subscriber disappears.
+The `/joy_node` node publishes joystick input on `/joy`.
+The repeat rate keeps messages active while the stick position stays constant.
 
-### Timing and stop behavior
+### Base computer — Terminal 2: velocity commands
 
-The GUI publishes both targets every 100 milliseconds.
-The Stop button sets both sliders and number displays to zero, then publishes `M 0 0` immediately.
-The robot node forwards fresh targets immediately and repeats them every 100 milliseconds.
-If ROS commands stop for 500 milliseconds, the robot node replaces its targets with zero.
-If serial commands stop for 500 milliseconds, the Arduino removes motor drive.
-Timer scheduling and communication delays can extend the response time.
-A motor shield fault removes drive and stays active until the Arduino restarts.
+```bash
+cd ~/human_machine_interface
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=3
+unset ROS_LOCALHOST_ONLY
+export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+python3 week8_joystick_teleop.py --ros-args --params-file config/week8_joystick.yaml
+```
 
-The GUI connection message confirms that a ROS subscriber is visible.
-It does not confirm motor motion, encoder speed, or the motor shield state.
-Arduino responses appear in the robot terminal.
-ROS 2 also creates the standard `/rosout` and `/parameter_events` topics.
+The `/joystick_teleop` node receives `/joy` and publishes `/cmd_vel` at 5 Hz.
+The message type is `geometry_msgs/msg/Twist`.
+
+### Robot computer — Terminal 2: message display
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=3
+unset ROS_LOCALHOST_ONLY
+export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
+ros2 topic echo /cmd_vel
+```
+
+This terminal displays messages continuously. Terminal 1 controls the motors.
+
+## Check operation
+
+1. Switch on the motor power.
+2. Move the stick forward.
+3. Move the stick backward.
+4. Check that `linear.x` changes.
+5. Move the stick left.
+6. Move the stick right.
+7. Check that `angular.z` changes.
+8. Release the stick.
+9. Check that both values return to zero.
+10. Check that the robot stops.
+
+```text
+Joystick -> /joy -> /joystick_teleop -> /cmd_vel
+         -> /motor_interface -> USB serial -> Arduino -> motors
+```
+
+The USB serial baud rate is 115200.
+The current wheel speed request limit is 10 RPM.
+Actual wheel RPM is not measured by this program.
+
+## If the system does not operate
+
+| Result | Check |
+|---|---|
+| Joystick device list is empty | USB connection and input device permissions |
+| `/cmd_vel` stays zero | `/joy` input and the joystick axis settings |
+| Base computer has changing `/cmd_vel`, but robot has no messages | Wi-Fi connection and ROS settings on both computers |
+| Robot receives changing `/cmd_vel`, but motors do not move | Motor interface errors, Arduino upload, and motor power |
+| Upload fails | Board selection, port selection, and programs that use the serial port |
+
+If the Arduino port gives `Permission denied`, run on the **robot computer**:
+
+```bash
+sudo usermod -aG dialout "$USER"
+```
+
+Log out of the robot computer. Log in again before you start the motor interface.
+
+## Stop the system
+
+1. Release the stick.
+2. Check that the robot stops.
+3. Press **Ctrl+C** in Base Terminal 2.
+4. Press **Ctrl+C** in Base Terminal 1.
+5. Press **Ctrl+C** in Robot Terminal 1.
+6. Press **Ctrl+C** in Robot Terminal 2.
+7. Switch off the motor power.
