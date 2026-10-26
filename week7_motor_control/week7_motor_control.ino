@@ -12,7 +12,7 @@ const unsigned long TIMEOUT_MS = 500;
 // M1 is the left side and M2 is the right side according to the Week 7 diagram
 // Change either sign to -1 if that side rotates opposite to the intended direction
 const int LEFT_DIRECTION = 1;
-const int RIGHT_DIRECTION = 1;
+const int RIGHT_DIRECTION = -1;
 
 // A fixed buffer avoids dynamic String allocation on the Uno
 char inputLine[48];
