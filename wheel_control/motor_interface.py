@@ -15,7 +15,7 @@ from .motor_settings import MotorSettings
 class MotorInterface(Node):
     def __init__(self):
         super().__init__('motor_interface')
-        # The wheel diameter is 75 mm, so the radius is 37.5 mm
+        # The wheel diameter is 150 mm, so the radius is 75.0 mm
         self.wheel_radius = 0.075 / 2.0
         # Measure separation between the left and right wheel centres in metres
         self.wheel_separation = 0.443
