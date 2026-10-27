@@ -2,7 +2,7 @@
 # The Arduino uses the same drive limit, baud rate, and timeout in its own program
 class MotorSettings:
     # These are signed motor drive values from the Pololu library, not angles or RPM
-    MAX_COMMAND = 400
+    MAX_COMMAND = 340
 
     # Send the left and right targets together on this ROS topic
     TOPIC = '/motor_cmd'
