@@ -16,7 +16,7 @@ class MotorInterface(Node):
     def __init__(self):
         super().__init__('motor_interface')
         # The wheel diameter is 150 mm, so the radius is 75.0 mm
-        self.wheel_radius = 0.150 / 2.0
+        self.wheel_radius = 0.1524 / 2.0
         # Measure separation between the left and right wheel centres in metres
         self.wheel_separation = 0.443
         # Keep the 10 RPM request limit already selected in this interface
