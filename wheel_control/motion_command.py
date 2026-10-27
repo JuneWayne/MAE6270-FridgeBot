@@ -14,7 +14,7 @@ class MotionCommand(Node):
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
 
         # Robot dimensions
-        self.wheel_radius = 0.075       # meters
+        self.wheel_radius = 0.0762       # meters
         self.wheel_separation = 0.443   # meters
 
         # Match the existing motor interface limit: 10 RPM
