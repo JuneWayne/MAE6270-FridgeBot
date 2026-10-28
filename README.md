@@ -231,34 +231,131 @@ sudo usermod -aG dialout "$USER"
 
 Log out of the robot computer. Log in again before you start the interface.
 
-## Optional: USB camera
+## Camera and LiDAR dashboard
 
-Connect the camera to the robot computer.
-Keep `start_camera.sh`, `direct_camera.py`, and `ros_env.sh` in the project folder.
-Install the camera packages once on that computer:
+The robot computer sends sensor messages. The base computer displays them.
+The dashboard does not start the camera or the Velodyne driver.
+Motor control scripts are not required to display sensor data.
+
+### Files required on each computer
+
+Keep these files together in the project folder on the specified computer:
+
+| Computer | Files |
+|---|---|
+| Robot | `start_camera.sh`, `direct_camera.py`, `ros_env.sh` |
+| Base | `fridgebot_dashboard.py`, `dashboard_window.py`, `dashboard_camera_node.py`, `dashboard_lidar_panel.py`, `read_cloud_xyz.py`, `fridgebot_dashboard.ui`, `ros_env.sh` |
+
+If `ros_env.sh` is missing, use `setup_ros_env.sh` as specified in **First setup**.
+
+### Install the sensor display packages once
+
+Run on the **robot computer**:
 
 ```bash
 sudo apt update
-sudo apt install python3-opencv ros-jazzy-cv-bridge v4l-utils
+sudo apt install python3-opencv python3-numpy ros-jazzy-cv-bridge v4l-utils
 ```
 
-Find the device:
+Run on the **base computer**:
+
+```bash
+sudo apt update
+sudo apt install python3-pyqt5 python3-numpy ros-jazzy-cv-bridge ros-jazzy-sensor-msgs-py
+```
+
+### Robot computer: start the camera
+
+1. Connect the USB camera to the robot computer.
+2. Close other programs that use this camera.
+3. Find the camera device:
 
 ```bash
 v4l2-ctl --list-devices
 ```
 
-Start capture in a separate terminal:
+4. Start capture in a separate terminal:
 
 ```bash
 cd ~/MAE6270-FridgeBot
 bash start_camera.sh
 ```
 
-The default camera is `/dev/video0`.
-For another camera, use `bash start_camera.sh /dev/video2`.
-Images are published on `/image_raw`.
-Press **Ctrl+C** in the camera terminal to stop capture.
+The script loads `ros_env.sh` automatically. The default camera is `/dev/video0`.
+For a camera at `/dev/video2`, use this command instead:
+
+```bash
+bash start_camera.sh /dev/video2
+```
+
+Keep the camera terminal open.
+The `/direct_camera` node publishes images on `/image_raw`.
+It prints the image rate approximately every five seconds.
+
+### Robot computer: start the LiDAR
+
+Start the team's existing Velodyne driver and point cloud converter in another terminal.
+Load `ros_env.sh` before the team's LiDAR start command.
+Load the LiDAR workspace setup file if that driver requires it.
+The converter must publish `/velodyne_points` with type `sensor_msgs/msg/PointCloud2`.
+
+This repository does not contain the team's Velodyne launch command.
+Use the working command for your sensor model.
+The camera display can operate while the LiDAR is stopped.
+
+### Base computer: start the dashboard
+
+1. Connect the base computer to the robot network.
+2. Open a terminal on the base computer.
+3. Run:
+
+```bash
+cd ~/MAE6270-FridgeBot
+source ros_env.sh
+python3 fridgebot_dashboard.py
+```
+
+Run only `fridgebot_dashboard.py`. It imports the other dashboard modules automatically.
+Do not run `start_camera.sh` on the base computer when the camera is attached to the robot.
+
+| Panel | Topic | Display |
+|---|---|---|
+| Left | `/image_raw` | Live camera image |
+| Right | `/velodyne_points` | Current 3D points projected onto the XY plane |
+
+The LiDAR panel shows all heights together. It does not accumulate a map.
+The frame name appears above the LiDAR panel. Positive X points up; positive Y points left.
+The default view extends 5 m from the frame origin to each plot edge.
+To increase this distance to 10 m, use this command instead:
+
+```bash
+python3 fridgebot_dashboard.py --ros-args -p lidar_view_radius_m:=10.0
+```
+
+Press **F11** to enter full screen. Press **Esc** to leave full screen.
+The **ENABLE MOTORS** and **STOP MOTORS** buttons are disabled. Motor control is not connected to this dashboard.
+Use the existing joystick or motion command program for motor control.
+
+### Check a missing sensor display
+
+Open another terminal on the **base computer**:
+
+```bash
+cd ~/MAE6270-FridgeBot
+source ros_env.sh
+ros2 topic info /image_raw --verbose
+ros2 topic info /velodyne_points --verbose
+```
+
+Check for at least one publisher on each active sensor topic.
+Both computers must use `ROS_DOMAIN_ID=3`.
+If a topic is missing, check its robot program and the network connection.
+These check commands are not required for normal display operation.
+
+The dashboard clears old sensor data after two seconds without new messages.
+Close the dashboard window to stop the display.
+Press **Ctrl+C** in the robot camera terminal to stop capture.
+Stop the Velodyne program separately when it is no longer required.
 
 ## Stop the system
 

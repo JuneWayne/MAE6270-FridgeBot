@@ -8,8 +8,10 @@ from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtWidgets import QMainWindow, QSizePolicy
 from rclpy.executors import ExternalShutdownException
 
+from dashboard_lidar_panel import DashboardLidarPanel
 
-# Load the Designer layout and update its camera panel
+
+# Load the Designer layout and update both sensor panels
 class DashboardWindow(QMainWindow):
     def __init__(self, node):
         super().__init__()
@@ -31,10 +33,10 @@ class DashboardWindow(QMainWindow):
         for button in (self.enableMotorsButton, self.stopMotorsButton):
             button.setEnabled(False)
             button.setToolTip('Motor control is not connected')
-        self.lidarView.setToolTip('LiDAR display is not connected')
+        self.lidar_panel = DashboardLidarPanel(node, self.lidarView, self.lidarGroup)
         self.statusbar.showMessage('Waiting for camera | Motor control is not connected')
 
-        # Run ROS callbacks in the Qt thread so image updates stay in the same thread
+        # Run ROS callbacks in the Qt thread so display updates stay in the same thread
         self.ros_timer = QTimer(self)
         self.ros_timer.timeout.connect(self.update_camera)
         self.ros_timer.start(33)
@@ -44,7 +46,12 @@ class DashboardWindow(QMainWindow):
             self.close()
             return
         try:
-            rclpy.spin_once(self.node, timeout_sec=0)
+            # Process both sensor streams without holding the GUI for a long time
+            deadline = time.monotonic() + 0.005
+            for _ in range(8):
+                rclpy.spin_once(self.node, timeout_sec=0)
+                if time.monotonic() >= deadline:
+                    break
         except ExternalShutdownException:
             self.close()
             return
@@ -73,8 +80,9 @@ class DashboardWindow(QMainWindow):
         if camera_status != 'Camera images received':
             self.camera_pixmap = None
             self.cameraImage.setText(camera_status)
+        lidar_status = self.lidar_panel.update()
         self.statusbar.showMessage(
-            f'{camera_status} | Motor control is not connected | F11: full screen'
+            f'{camera_status} | {lidar_status} | Motor control is not connected | F11: full screen'
         )
 
     def fit_camera_image(self):
@@ -90,6 +98,8 @@ class DashboardWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'cameraImage'):
             self.fit_camera_image()
+        if hasattr(self, 'lidar_panel'):
+            self.lidar_panel.fit_view()
 
     def keyPressEvent(self, event):
         # Use F11 to change display mode and Escape to leave full screen

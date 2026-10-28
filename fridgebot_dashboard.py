@@ -7,7 +7,7 @@ from dashboard_camera_node import DashboardCameraNode
 from dashboard_window import DashboardWindow
 
 
-# Start the camera dashboard on the base computer
+# Start the camera and LiDAR dashboard on the base computer
 def main():
     rclpy.init(args=sys.argv)
     node = None
