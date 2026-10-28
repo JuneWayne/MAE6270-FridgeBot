@@ -24,7 +24,7 @@ class MotorInterface(Node):
         self.max_wheel_rad_s = self.wheel_rpm_limit * 2.0 * math.pi / 60.0
         # Estimate gearbox output RPM at full drive until encoder calibration is available
         # The gearbox reduction must not be applied again to this output shaft speed
-        self.estimated_full_drive_rpm = 13.5 * 8 # multiplied based on calibration plot
+        self.estimated_full_drive_rpm = 13.5 * 8.9645 # multiplied based on calibration plot
         self.declare_parameter('port', MotorSettings.DEFAULT_PORT)
         self.connection = None
         self.targets = (0, 0)
