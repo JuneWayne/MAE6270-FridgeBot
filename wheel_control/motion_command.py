@@ -18,7 +18,7 @@ class MotionCommand(Node):
         self.wheel_separation = 0.443   # meters
 
         # Match the existing motor interface limit: 30 RPM
-        self.wheel_rpm = 30.0
+        self.wheel_rpm = 10 * 8.9645
 
         # Linear speed of each wheel in m/s
         self.speed = (
