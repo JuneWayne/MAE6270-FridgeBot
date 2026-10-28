@@ -20,7 +20,7 @@ class MotorInterface(Node):
         # Measure separation between the left and right wheel centres in metres
         self.wheel_separation = 0.443
         # Keep the 10 RPM request limit already selected in this interface
-        self.wheel_rpm_limit = 10 * 8.9645
+        self.wheel_rpm_limit = 13 * 8.9645
         self.max_wheel_rad_s = self.wheel_rpm_limit * 2.0 * math.pi / 60.0
         # Estimate gearbox output RPM at full drive until encoder calibration is available
         # The gearbox reduction must not be applied again to this output shaft speed
