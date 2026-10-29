@@ -58,7 +58,7 @@ class MotorInterface(Node):
         omega = message.angular.z
 
         # Calculate wheel speed requests in rad/s from robot speed and turn rate
-        right = 0.98 * (v + (self.wheel_separation / 2.0) * omega) / self.wheel_radius
+        right = 0.97 * (v + (self.wheel_separation / 2.0) * omega) / self.wheel_radius
         left = (v - (self.wheel_separation / 2.0) * omega) / self.wheel_radius
 
         # Invalid or overflowing input must remove drive instead of crashing the callback
