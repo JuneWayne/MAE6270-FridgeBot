@@ -34,6 +34,7 @@ class DashboardWindow(QMainWindow):
             button.setEnabled(False)
             button.setToolTip('Motor control is not connected')
         self.lidar_panel = DashboardLidarPanel(node, self.lidarView, self.lidarGroup)
+        self.lidarView = self.lidar_panel.view
         self.statusbar.showMessage('Waiting for camera | Motor control is not connected')
 
         # Run ROS callbacks in the Qt thread so display updates stay in the same thread
@@ -68,14 +69,7 @@ class DashboardWindow(QMainWindow):
             self.fit_camera_image()
 
         # Remove old images when the stream stops so they do not look live
-        if self.node.camera_error:
-            camera_status = self.node.camera_error
-        elif self.node.last_frame_time is None:
-            camera_status = 'Waiting for camera'
-        elif time.monotonic() - self.node.last_frame_time > 2.0:
-            camera_status = 'No camera image for 2 seconds'
-        else:
-            camera_status = 'Camera images received'
+        camera_status = self.node.camera_status()
 
         if camera_status != 'Camera images received':
             self.camera_pixmap = None
@@ -98,8 +92,6 @@ class DashboardWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'cameraImage'):
             self.fit_camera_image()
-        if hasattr(self, 'lidar_panel'):
-            self.lidar_panel.fit_view()
 
     def keyPressEvent(self, event):
         # Use F11 to change display mode and Escape to leave full screen

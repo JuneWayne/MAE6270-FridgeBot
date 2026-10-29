@@ -1,51 +1,85 @@
 import math
+import os
+import sys
 import time
 
 import numpy as np
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap
-from PyQt5.QtWidgets import QGraphicsScene
+from PyQt5.QtGui import QVector3D
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import PointCloud2
 
 from read_cloud_xyz import read_cloud_xyz
 
 
-# Project XYZ point clouds onto the XY plane of the message coordinate frame
+# Display the complete XYZ point cloud in an interactive 3D view
 class DashboardLidarPanel:
-    def __init__(self, node, view, group):
-        self.view = view
+    def __init__(self, node, placeholder, group):
+        # Match OpenGL to the active Qt display before importing the graphics library
+        # WSL and Ubuntu can expose both X11 and Wayland environment variables
+        platform = QApplication.platformName()
+        if sys.platform.startswith('linux') and 'OpenGL.platform' not in sys.modules:
+            if platform == 'xcb':
+                os.environ.setdefault('PYOPENGL_PLATFORM', 'glx')
+            elif platform.startswith('wayland'):
+                os.environ.setdefault('PYOPENGL_PLATFORM', 'egl')
+        import pyqtgraph.opengl as gl
+
         self.group = group
         self.pending_cloud = None
         self.last_cloud_time = None
         self.status = 'Waiting for LiDAR'
         self.point_count = 0
 
-        # Set the visible distance from the sensor to each edge of the plot
+        # Keep the existing parameter as the starting grid and camera scale
         node.declare_parameter('lidar_view_radius_m', 5.0)
         self.radius_m = float(node.get_parameter('lidar_view_radius_m').value)
         if not math.isfinite(self.radius_m) or self.radius_m <= 0:
             raise ValueError('lidar_view_radius_m must be finite and greater than zero')
 
-        # Use a fixed scene size so labels and points keep useful sizes
-        self.plot_radius = 300.0
-        self.pixels_per_metre = self.plot_radius / self.radius_m
-        self.scene = QGraphicsScene(view)
-        self.scene.setSceneRect(-345, -345, 690, 690)
-        view.setScene(self.scene)
-        view.setBackgroundBrush(QColor('#18212b'))
-        view.setRenderHint(QPainter.Antialiasing)
-        view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        view.setToolTip('Current point cloud: +X up, +Y left, all heights shown')
-        self.draw_grid()
+        # Replace the Designer placeholder without changing the saved UI file
+        self.view = gl.GLViewWidget(parent=group)
+        self.view.setObjectName('lidarView3D')
+        self.view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.view.setBackgroundColor('#18212b')
+        layout = group.layout()
+        layout.replaceWidget(placeholder, self.view)
+        placeholder.hide()
+        placeholder.deleteLater()
+        self.message_label = QLabel('Waiting for LiDAR', group)
+        self.message_label.setWordWrap(True)
+        self.message_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        layout.addWidget(self.message_label)
+        self.reset_button = QPushButton('Reset 3D view', group)
+        self.reset_button.clicked.connect(self.reset_view)
+        layout.addWidget(self.reset_button)
+        layout.setStretch(0, 1)
+        self.view.setToolTip('Left drag: rotate | Middle drag: move view | Wheel: zoom')
 
-        # Use one image for large clouds so thousands of graphics items are not needed
-        self.points_item = self.scene.addPixmap(QPixmap())
-        self.points_item.setPos(-self.plot_radius, -self.plot_radius)
-        self.message_item = self.scene.addText('Waiting for LiDAR')
-        self.message_item.setDefaultTextColor(QColor('white'))
-        self.message_item.setPos(-110, 40)
+        # Grid coordinates use metres in the point cloud message frame
+        self.grid = gl.GLGridItem()
+        self.grid.setSize(x=2 * self.radius_m, y=2 * self.radius_m)
+        self.grid.setSpacing(x=self.radius_m / 5, y=self.radius_m / 5)
+        self.view.addItem(self.grid)
+        self.axes = []
+        for end, color in (
+            ((1, 0, 0), (1, 0.25, 0.25, 1)),
+            ((0, 1, 0), (0.25, 1, 0.25, 1)),
+            ((0, 0, 1), (0.3, 0.6, 1, 1)),
+        ):
+            axis = gl.GLLinePlotItem(pos=np.array([(0, 0, 0), end], dtype=np.float32),
+                                     color=color, width=2, antialias=True)
+            self.axes.append(axis)
+            self.view.addItem(axis)
+
+        # Keep Z coordinates so points above each other remain separate in 3D
+        self.points_item = gl.GLScatterPlotItem(
+            pos=np.empty((0, 3), dtype=np.float32),
+            color=(0.35, 0.96, 0.54, 1), size=2, pxMode=True,
+        )
+        self.points_item.setGLOptions('opaque')
+        self.view.addItem(self.points_item)
+        self.reset_view()
 
         # Best effort reception accepts best effort and reliable point cloud publishers
         qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
@@ -53,28 +87,10 @@ class DashboardLidarPanel:
             PointCloud2, '/velodyne_points', self.receive_cloud, qos
         )
 
-    def draw_grid(self):
-        grid_pen = QPen(QColor('#455565'))
-        grid_pen.setCosmetic(True)
-        for ring in range(1, 6):
-            radius = self.plot_radius * ring / 5
-            self.scene.addEllipse(-radius, -radius, 2 * radius, 2 * radius, grid_pen)
-            label = self.scene.addText(f'{self.radius_m * ring / 5:g} m')
-            label.setDefaultTextColor(QColor('#b5c4d3'))
-            label.setPos(radius - 35, 4)
-        self.scene.addLine(-300, 0, 300, 0, grid_pen)
-        self.scene.addLine(0, -300, 0, 300, grid_pen)
-        heading = self.scene.addText('+X up | +Y left | all heights')
-        heading.setDefaultTextColor(QColor('white'))
-        heading.setPos(-100, -338)
-
-        # The centre marker shows the message frame origin and its positive X direction
-        marker = QPainterPath()
-        marker.moveTo(0, -10)
-        marker.lineTo(-7, 7)
-        marker.lineTo(7, 7)
-        marker.closeSubpath()
-        self.scene.addPath(marker, QPen(Qt.NoPen), QColor('#ffcf5c')).setZValue(1)
+    def reset_view(self):
+        # Start above the XY plane so height is visible without moving the mouse
+        self.view.setCameraPosition(pos=QVector3D(0, 0, 0), distance=3 * self.radius_m,
+                                    elevation=25, azimuth=45)
 
     def receive_cloud(self, message):
         # Keep the latest point cloud until the next display update
@@ -97,36 +113,21 @@ class DashboardLidarPanel:
             self.clear_cloud(f'Invalid LiDAR point cloud: {error}')
             return
 
-        # Remove invalid coordinates even if the publisher marks the cloud as dense
+        # Remove invalid coordinates but keep valid points outside the initial grid
         valid = np.isfinite(points).all(axis=1)
-        valid &= (np.abs(points[:, :2]) <= self.radius_m).all(axis=1)
-        points = points[valid]
+        valid &= (np.abs(points) <= np.finfo(np.float32).max).all(axis=1)
+        points = np.ascontiguousarray(points[valid], dtype=np.float32)
         self.point_count = len(points)
-
-        # Place positive X at the top and positive Y at the left of the plot
-        size = int(2 * self.plot_radius + 1)
-        pixels = np.zeros((size, size, 4), dtype=np.uint8)
-        columns = np.rint(self.plot_radius - points[:, 1] * self.pixels_per_metre).astype(int)
-        rows = np.rint(self.plot_radius - points[:, 0] * self.pixels_per_metre).astype(int)
-        for dx, dy in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)):
-            pixels[np.clip(rows + dy, 0, size - 1), np.clip(columns + dx, 0, size - 1)] = (
-                89, 245, 138, 255
-            )
-        image = QImage(pixels.data, size, size, pixels.strides[0], QImage.Format_RGBA8888).copy()
-
-        # Replace the previous cloud without accumulating a map or applying a TF transform
-        self.points_item.setPixmap(QPixmap.fromImage(image))
-        self.group.setTitle(f'LiDAR | {message.header.frame_id or "frame not set"}')
-        self.status = f'LiDAR: {self.point_count} points in view'
-        self.message_item.setPlainText('No cloud points in view')
-        self.message_item.setVisible(self.point_count == 0)
+        self.points_item.setData(pos=points)
+        self.group.setTitle(f'LiDAR 3D | {message.header.frame_id or "frame not set"}')
+        self.status = f'LiDAR: {self.point_count} 3D points'
+        self.message_label.setText(
+            f'{self.point_count} points | X: red | Y: green | Z: blue | Units: metres'
+            if self.point_count else 'No valid points in the current cloud'
+        )
 
     def clear_cloud(self, status):
-        self.points_item.setPixmap(QPixmap())
+        self.points_item.setData(pos=np.empty((0, 3), dtype=np.float32))
         self.point_count = 0
         self.status = status
-        self.message_item.setPlainText(status)
-        self.message_item.setVisible(True)
-
-    def fit_view(self):
-        self.view.fitInView(self.scene.sceneRect(), Qt.KeepAspectRatio)
+        self.message_label.setText(status)
