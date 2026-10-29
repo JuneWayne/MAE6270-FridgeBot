@@ -5,7 +5,7 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage, Image
 
 
 # Receive camera images without sending motor commands
@@ -19,13 +19,19 @@ class DashboardCameraNode(Node):
         self.publisher_count = 0
         self.last_discovery_check = None
         self.received_images = 0
-        self.declare_parameter('camera_topic', '/image_raw')
+        self.declare_parameter('camera_transport', 'compressed')
+        transport = self.get_parameter('camera_transport').value
+        if transport not in ('raw', 'compressed'):
+            raise ValueError('camera_transport must be raw or compressed')
+        default_topic = '/image_raw/compressed' if transport == 'compressed' else '/image_raw'
+        self.declare_parameter('camera_topic', default_topic)
         camera_topic = self.get_parameter('camera_topic').value
 
         # Keep the newest image and accept the existing best effort camera publisher
         qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.subscription = self.create_subscription(
-            Image, camera_topic, self.receive_image, qos
+            CompressedImage if transport == 'compressed' else Image,
+            camera_topic, self.receive_image, qos
         )
         self.camera_topic = self.subscription.topic_name
         self.get_logger().info(f'Camera display subscribes to {self.camera_topic}')
@@ -34,7 +40,15 @@ class DashboardCameraNode(Node):
         self.received_images += 1
         # Convert the ROS encoding to RGB bytes for the Qt display
         try:
-            frame = self.bridge.imgmsg_to_cv2(message, desired_encoding='rgb8')
+            if isinstance(message, CompressedImage):
+                # Decode JPEG bytes before passing RGB pixels to the Qt display
+                encoded = np.frombuffer(message.data, dtype=np.uint8)
+                decoded = cv2.imdecode(encoded, cv2.IMREAD_COLOR)
+                if decoded is None:
+                    raise ValueError('The compressed camera image cannot be decoded')
+                frame = cv2.cvtColor(decoded, cv2.COLOR_BGR2RGB)
+            else:
+                frame = self.bridge.imgmsg_to_cv2(message, desired_encoding='rgb8')
             if (frame.size == 0 or frame.ndim != 3 or frame.shape[2] != 3
                     or frame.dtype != np.uint8):
                 raise ValueError('The converted camera image must contain RGB8 pixels')

@@ -261,7 +261,7 @@ Run on the **base computer**:
 
 ```bash
 sudo apt update
-sudo apt install python3-pyqt5 python3-numpy ros-jazzy-cv-bridge ros-jazzy-sensor-msgs-py
+sudo apt install python3-pyqt5 python3-numpy python3-pyqtgraph python3-opengl ros-jazzy-cv-bridge ros-jazzy-sensor-msgs-py
 ```
 
 ### Robot computer: start the camera
@@ -281,16 +281,28 @@ cd ~/MAE6270-FridgeBot
 bash start_camera.sh
 ```
 
-The script loads `ros_env.sh` automatically. The default camera is `/dev/video0`.
-For a camera at `/dev/video2`, use this command instead:
+The script loads `ros_env.sh` automatically.
+The team's RealSense color device was identified as `/dev/video6` with YUYV support.
+Check the device again after a USB reconnection. Replace `/dev/video6` if its path changes.
+The robot laptop's `/dev/video0` is its built-in camera.
 
-```bash
-bash start_camera.sh /dev/video2
-```
+Compressed mode sends JPEG images on `/image_raw/compressed` with type `sensor_msgs/msg/CompressedImage`.
+It sends at most 10 frames per second. This reduces camera traffic when LiDAR shares the Wi-Fi connection.
+The USB capture format and the ROS message format are separate: YUYV capture is converted to JPEG before transmission.
 
 Keep the camera terminal open.
-The `/direct_camera` node publishes images on `/image_raw`.
-It prints the image rate approximately every five seconds.
+The `/direct_camera` node prints its publication rate and average message size approximately every five seconds.
+These values do not confirm reception by the base computer.
+
+For raw images, use this robot command instead:
+
+```bash
+bash start_camera.sh /dev/video6 --fourcc YUYV --transport raw --fps 10
+```
+
+Raw mode publishes `/image_raw` with type `sensor_msgs/msg/Image`.
+For this mode, start the dashboard with `-p camera_transport:=raw` after `--ros-args`.
+If no arguments are supplied, the script uses `/dev/video6`, YUYV capture, compressed messages, and a 10 FPS publication limit.
 
 ### Robot computer: start the LiDAR
 
@@ -320,13 +332,21 @@ Do not run `start_camera.sh` on the base computer when the camera is attached to
 
 | Panel | Topic | Display |
 |---|---|---|
-| Left | `/image_raw` | Live camera image |
-| Right | `/velodyne_points` | Current 3D points projected onto the XY plane |
+| Left | `/image_raw/compressed` | Live camera image in compressed mode |
+| Right | `/velodyne_points` | Interactive 3D point cloud with X, Y and Z coordinates |
 
-The LiDAR panel shows all heights together. It does not accumulate a map.
-The frame name appears above the LiDAR panel. Positive X points up; positive Y points left.
-The default view extends 5 m from the frame origin to each plot edge.
-To increase this distance to 10 m, use this command instead:
+The LiDAR panel preserves point height. It does not accumulate a map or transform the message frame.
+The frame name appears above the LiDAR panel. The X axis is red, Y is green, and Z is blue.
+Coordinates use metres. The grid is a reference plane at Z = 0, not a detected floor.
+
+- Hold the left mouse button and drag to rotate the view.
+- Hold the middle mouse button and drag to move the view.
+- Turn the mouse wheel to zoom.
+- Click **Reset 3D view** to restore the starting view.
+
+The default grid extends 5 m from the frame origin in X and Y.
+Valid points outside the grid are retained. Zoom out to see distant points.
+To increase the starting grid size and viewing distance, use this command instead:
 
 ```bash
 python3 fridgebot_dashboard.py --ros-args -p lidar_view_radius_m:=10.0
@@ -343,7 +363,7 @@ Open another terminal on the **base computer**:
 ```bash
 cd ~/MAE6270-FridgeBot
 source ros_env.sh
-ros2 topic info /image_raw --verbose
+ros2 topic info /image_raw/compressed --verbose
 ros2 topic info /velodyne_points --verbose
 ```
 
@@ -351,6 +371,47 @@ Check for at least one publisher on each active sensor topic.
 Both computers must use `ROS_DOMAIN_ID=3`.
 If a topic is missing, check its robot program and the network connection.
 These check commands are not required for normal display operation.
+
+The camera panel reports the connection state:
+
+| Message | Next check |
+|---|---|
+| `No camera publisher on ...` | Check that `start_camera.sh` runs on the robot with the same ROS domain |
+| `Camera publisher found on ..., but no image received` | Check message delivery between the computers; discovery alone does not confirm image delivery |
+| `Cannot read camera image: ...` | Read the conversion error in the base terminal |
+| `No camera image for 2 seconds on ...` | Check whether capture or message delivery stopped |
+
+If the robot reports a publishing rate but the display stays empty, run on the base computer:
+
+```bash
+ros2 topic echo /image_raw/compressed --once --field header --qos-reliability best_effort
+```
+
+This command displays one image header. It does not start the camera.
+If no header appears, press **Ctrl+C** after ten seconds and send the topic information and robot camera log for diagnosis.
+
+If the camera publishes on another topic, select its actual `sensor_msgs/msg/Image` topic:
+
+```bash
+python3 fridgebot_dashboard.py --ros-args -p camera_transport:=raw -p camera_topic:=/camera/image_raw
+```
+
+The topic above is an example. Use the name from `ros2 topic list -t`.
+The dashboard defaults to `CompressedImage` messages on `/image_raw/compressed`.
+With `camera_transport:=raw`, it receives raw `Image` messages on `/image_raw` by default.
+The `camera_topic` parameter overrides the exact topic name in either mode.
+Match the robot and dashboard modes. Compressed mode publishes no raw image topic.
+
+If the robot keeps publishing but the display stops receiving, compare the message rate on both computers:
+
+```bash
+ros2 topic hz /image_raw/compressed
+```
+
+Press **Ctrl+C** to stop the rate check.
+Close separate raw-image viewers during the compressed-mode test.
+If interruptions remain, repeat with `--fps 5` in the robot camera command.
+Keep the two-second dashboard timeout so a stopped image does not appear live.
 
 The dashboard clears old sensor data after two seconds without new messages.
 Close the dashboard window to stop the display.
