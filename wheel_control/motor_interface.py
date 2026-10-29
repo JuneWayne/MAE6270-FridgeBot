@@ -20,11 +20,11 @@ class MotorInterface(Node):
         # Measure separation between the left and right wheel centres in metres
         self.wheel_separation = 0.443
         # Keep the 10 RPM request limit already selected in this interface
-        self.wheel_rpm_limit = 13.5 * 8.9645 * 1.2
+        self.wheel_rpm_limit = 13.5 * 8.9645 * 1.1
         self.max_wheel_rad_s = self.wheel_rpm_limit * 2.0 * math.pi / 60.0
         # Estimate gearbox output RPM at full drive until encoder calibration is available
         # The gearbox reduction must not be applied again to this output shaft speed
-        self.estimated_full_drive_rpm = 13.5 * 8.9645 * 1.2 # multiplied based on calibration plot
+        self.estimated_full_drive_rpm = 13.5 * 8.9645 * 1.1 # multiplied based on calibration plot
         self.declare_parameter('port', MotorSettings.DEFAULT_PORT)
         self.connection = None
         self.targets = (0, 0)
@@ -58,7 +58,7 @@ class MotorInterface(Node):
         omega = message.angular.z
 
         # Calculate wheel speed requests in rad/s from robot speed and turn rate
-        right = 0.925 * (v + (self.wheel_separation / 2.0) * omega) / self.wheel_radius
+        right = 0.927 * (v + (self.wheel_separation / 2.0) * omega) / self.wheel_radius
         left = (v - (self.wheel_separation / 2.0) * omega) / self.wheel_radius
 
         # Invalid or overflowing input must remove drive instead of crashing the callback
