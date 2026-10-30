@@ -179,6 +179,9 @@ def main(args=None):
             print(f'\n[{i}/{len(commands)}] {command} {value:g}')
             node.execute_command(command, value)
 
+            if i < len(commands):
+                time.sleep(0.5)  # Wait 0.5 seconds between commands
+
         print('\nSequence complete.')
 
     finally:
