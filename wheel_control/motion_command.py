@@ -18,7 +18,7 @@ class MotionCommand(Node):
         self.wheel_separation = 0.443   # meters
 
         # Match the existing motor interface limit: 30 RPM
-        self.wheel_rpm = 10 * 8.9645 * 1.07
+        self.wheel_rpm = 10 * 8.9645 * 1.15
 
         # Linear speed of each wheel in m/s
         self.speed = (
@@ -52,7 +52,7 @@ class MotionCommand(Node):
         if command == 'forward':
             linear = self.speed
             angular = 0.0
-            duration = value / self.speed
+            duration = 1.07 * value / self.speed
 
         elif command == 'backward':
             linear = -self.speed
