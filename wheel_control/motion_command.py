@@ -52,7 +52,7 @@ class MotionCommand(Node):
         if command == 'forward':
             linear = self.speed
             angular = 0.0
-            duration = value / self.speed
+            duration = 1.03 * value / self.speed
 
         elif command == 'backward':
             linear = -self.speed
@@ -62,7 +62,7 @@ class MotionCommand(Node):
         elif command == 'left':
             linear = 0.0
             angular = self.turn_speed
-            duration = 2.5 * math.radians(value) / self.turn_speed
+            duration = 2.501 * math.radians(value) / self.turn_speed
 
         elif command == 'right':
             linear = 0.0
