@@ -29,10 +29,10 @@ class JoystickTeleopNode(Node):
         super().__init__('joystick_teleop')
 
         # Select the axes array position for forward and backward input
-        self.declare_parameter('linear_axis', 1)
+        self.declare_parameter('linear_axis', 0)
 
         # Select the axes array position for left and right input
-        self.declare_parameter('angular_axis', 0)
+        self.declare_parameter('angular_axis', 1)
 
         # Set the full-stick forward speed request in m/s
         self.declare_parameter('linear_scale', 2.5)
