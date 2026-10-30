@@ -35,10 +35,10 @@ class JoystickTeleopNode(Node):
         self.declare_parameter('angular_axis', 1)
 
         # Set the full-stick forward speed request in m/s
-        self.declare_parameter('linear_scale', 2.5)
+        self.declare_parameter('linear_scale', 1.88)
 
         # Set the full-stick turn rate request in rad/s
-        self.declare_parameter('angular_scale', 1.1)
+        self.declare_parameter('angular_scale', 0.88)
 
         # Set how many velocity messages to publish each second
         self.declare_parameter('update_rate', 5.0)
