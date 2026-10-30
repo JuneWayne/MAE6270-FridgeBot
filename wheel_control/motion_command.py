@@ -52,7 +52,7 @@ class MotionCommand(Node):
         if command == 'forward':
             linear = self.speed
             angular = 0.0
-            duration = 1.05 * value / self.speed
+            duration = 1.035 * value / self.speed
 
         elif command == 'backward':
             linear = -self.speed
