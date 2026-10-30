@@ -62,7 +62,7 @@ class MotionCommand(Node):
         elif command == 'left':
             linear = 0.0
             angular = self.turn_speed
-            duration = 2.49 * math.radians(value) / self.turn_speed
+            duration = 2.485 * math.radians(value) / self.turn_speed
 
         elif command == 'right':
             linear = 0.0
