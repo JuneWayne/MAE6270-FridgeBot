@@ -180,7 +180,7 @@ def main(args=None):
             node.execute_command(command, value)
 
             if i < len(commands):
-                time.sleep(0.5)  # Wait 0.5 seconds between commands
+                time.sleep(0.75)  # Wait 0.75 seconds between commands
 
         print('\nSequence complete.')
 
