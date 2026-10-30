@@ -67,7 +67,7 @@ class MotionCommand(Node):
         elif command == 'right':
             linear = 0.0
             angular = -self.turn_speed
-            duration = 2.42 * math.radians(value) / self.turn_speed
+            duration = 2.5 * math.radians(value) / self.turn_speed
 
         else:
             self.get_logger().error('Unknown movement command.')
