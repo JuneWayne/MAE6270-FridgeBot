@@ -254,7 +254,7 @@ Run on the **robot computer**:
 
 ```bash
 sudo apt update
-sudo apt install python3-opencv python3-numpy ros-jazzy-cv-bridge v4l-utils
+sudo apt install python3-opencv python3-numpy ros-jazzy-cv-bridge ros-jazzy-velodyne v4l-utils
 ```
 
 Run on the **base computer**:
@@ -306,13 +306,21 @@ If no arguments are supplied, the script uses `/dev/video6`, YUYV capture, compr
 
 ### Robot computer: start the LiDAR
 
-Start the team's existing Velodyne driver and point cloud converter in another terminal.
-Load `ros_env.sh` before the team's LiDAR start command.
-Load the LiDAR workspace setup file if that driver requires it.
-The converter must publish `/velodyne_points` with type `sensor_msgs/msg/PointCloud2`.
+1. Connect the VLP-16 LiDAR to the robot computer through Ethernet.
+2. Switch on the LiDAR power.
+3. Open a separate terminal on the robot computer.
+4. Run:
 
-This repository does not contain the team's Velodyne launch command.
-Use the working command for your sensor model.
+```bash
+cd ~/MAE6270-FridgeBot
+source ros_env.sh
+ros2 launch velodyne velodyne-all-nodes-VLP16-launch.py
+```
+
+Keep this terminal running. The launch starts `/velodyne_driver_node`,
+`/velodyne_transform_node`, and `/velodyne_laserscan_node`.
+The `/velodyne_transform_node` publishes `/velodyne_points` for the dashboard.
+If you installed Velodyne in a separate ROS workspace, source that workspace setup file before the launch command.
 The camera display can operate while the LiDAR is stopped.
 
 ### Base computer: start the dashboard
