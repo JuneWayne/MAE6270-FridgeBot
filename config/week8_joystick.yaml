@@ -5,13 +5,13 @@
   ros__parameters:
 
     # Select the second axes value for forward and backward input
-    linear_axis: 0
+    linear_axis: 1
 
     # Select the first axes value for left and right input
-    angular_axis: 1
+    angular_axis: 1.88
 
     # Set the example full-stick forward speed request in m/s
-    linear_scale: 1.1
+    linear_scale: 0.88
 
     # Set the example full-stick turn rate request in rad/s
     angular_scale: 2.5
