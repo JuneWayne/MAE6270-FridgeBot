@@ -8,13 +8,13 @@
     linear_axis: 1
 
     # Select the first axes value for left and right input
-    angular_axis: 1.88
+    angular_axis: 0
 
     # Set the example full-stick forward speed request in m/s
     linear_scale: 0.88
 
     # Set the example full-stick turn rate request in rad/s
-    angular_scale: 2.5
+    angular_scale: 1.88
 
     # Publish five velocity messages per second
     update_rate: 5.0
