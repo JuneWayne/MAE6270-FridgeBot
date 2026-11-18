@@ -1,0 +1,28 @@
+[
+ {
+  "id": "fridgebot",
+  "name": "Fridge Bot",
+  "title": "Fridge Bot: Team C Mid-Term Presentation",
+  "pdf": "slides.pdf",
+  "pages": 9,
+  "aspect": 1.7777777777777777,
+  "media": [
+   {
+    "page": 7,
+    "x": 0.15,
+    "y": 0.31481,
+    "w": 0.65833,
+    "h": 0.65833,
+    "src": "media/image15.mp4"
+   },
+   {
+    "page": 8,
+    "x": 0.15,
+    "y": 0.31481,
+    "w": 0.65833,
+    "h": 0.65833,
+    "src": "media/image16.mp4"
+   }
+  ]
+ }
+]

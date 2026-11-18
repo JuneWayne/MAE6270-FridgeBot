@@ -1,0 +1,22 @@
+  :root { --bg: #fbfbfa; --ink: #17191c; --mute: #6b7078; --line: #d6d9dd; --accent: #2346d6; --stage: #3a3d42; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121315; --ink: #eceef0; --mute: #9399a1; --line: #3b3f45; --accent: #8ea2ff; --stage: #1d1f22; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+         display: flex; flex-direction: column; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 15px; font-weight: 600; flex: 1 1 auto; }
+  a, button { color: var(--accent); font: inherit; }
+  button { background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 10px; cursor: pointer; }
+  main { flex: 1 1 auto; overflow-y: auto; background: var(--stage); position: relative; }
+  .deck { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 16px; }
+  .deck[hidden] { display: none; }
+  .slide { position: relative; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); flex: none; }
+  .slide canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .slide video { position: absolute; object-fit: fill; background: #fff; }
+  .msg { color: #eee; padding: 24px; }
+  main:fullscreen { scroll-snap-type: y mandatory; background: #000; }
+  main:fullscreen .deck { gap: 0; padding: 0; }
+  main:fullscreen .slide { scroll-snap-align: center; box-shadow: none; margin: calc((100vh - var(--h)) / 2) 0; }
