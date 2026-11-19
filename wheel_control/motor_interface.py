@@ -30,6 +30,7 @@ class MotorInterface(Node):
         self.targets = (0, 0)
         self.last_command = None
         self.replies = bytearray()
+        self.arduino_confirmed = False
         # Keep the command timeout active even when ROS simulation time is paused
         self.steady_clock = Clock(clock_type=ClockType.STEADY_TIME)
 
@@ -119,8 +120,12 @@ class MotorInterface(Node):
             self.replies = bytearray(remaining)
             reply = line.decode('ascii', errors='replace').strip()
             # Keep startup, faults, and errors visible without printing every repeated OK
-            if reply and reply != 'OK':
+            if reply == 'OK' and not self.arduino_confirmed:
+                self.get_logger().info('Arduino: OK (serial link confirmed)')
+            elif reply and reply != 'OK':
                 self.get_logger().info(f'Arduino: {reply}')
+            if reply in ('READY', 'OK'):
+                self.arduino_confirmed = True
         if len(self.replies) > 4096:
             self.replies.clear()
             self.get_logger().warning('Discarded an oversized Arduino response')

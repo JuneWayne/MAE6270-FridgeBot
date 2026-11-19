@@ -93,6 +93,10 @@ Ready on /dev/ttyACM0; waiting for /cmd_vel
 Arduino: READY
 ```
 
+If the Uno is already running, the first command reply can appear as
+`Arduino: OK (serial link confirmed)` instead of the startup message.
+The `Ready on` line alone confirms only that the computer opened the serial port.
+
 The default port is `/dev/ttyACM0`.
 To find the actual port, run in another terminal:
 
@@ -134,7 +138,7 @@ The script starts both base programs:
 | Program | Function |
 |---|---|
 | `joy_node` | Publish joystick input on `/joy` with a 20 Hz repeat rate |
-| `week8_joystick_teleop.py` | Receive `/joy` and publish velocity commands on `/cmd_vel` at 5 Hz |
+| `week8_joystick_teleop.py` | Send changed stick commands immediately on `/cmd_vel` and repeat the current command at 5 Hz |
 
 The axis and speed settings are in `config/week8_joystick.yaml`.
 Move the stick to request movement.

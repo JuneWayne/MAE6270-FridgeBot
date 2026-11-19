@@ -115,11 +115,14 @@ class JoystickTeleopNode(Node):
         # Calculate turn rate from the selected stick input
         command.angular.z = message.axes[self.angular_axis] * self.angular_scale
 
-        # Save the latest request for the next publication timer call
+        # Send changes now so a stick release does not wait for the next timer call
+        changed = command != self.target
         self.target = command
 
         # Record when this joystick input arrived
         self.last_joy = time.monotonic()
+        if changed:
+            self.publisher.publish(command)
 
     # Publish at the selected rate and cancel commands when joystick input stops
     def update(self):
