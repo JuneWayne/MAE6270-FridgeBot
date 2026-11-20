@@ -438,3 +438,21 @@ Stop the Velodyne program separately when it is no longer required.
 4. Press **Ctrl+C** in the robot interface terminal.
 5. Stop any camera or message display scripts with **Ctrl+C**.
 6. Switch off the motor power.
+
+## D435i RGB-D mapping
+
+Use separate terminals in the project folder. Stop the Velodyne mapper, standalone odometry, or Nav2 before starting a camera mapping run. Close other programs that open the D435i camera directly.
+
+| Computer | Command | Purpose |
+|---|---|---|
+| Robot | `bash start_robot.sh` | Connect the motors |
+| Robot | `bash d435i.sh camera` | Start the color and depth streams |
+| Robot | `bash d435i.sh map run3` | Start RGB-D odometry and record a new camera map |
+| Base | `bash start_base.sh` | Start gamepad control |
+| Base | `bash d435i.sh view` | Open the map in RViz |
+
+Wait for the map launcher to receive color, depth, aligned depth, and color calibration. In RViz, check that **Occupancy map** updates as the robot moves. Drive slowly past objects with visible edges or surface texture. Keep part of the previous camera view in each new view as you turn. Select **Accumulated 3D cloud** to inspect the mapped surfaces. To view the live RGB image, add an **Image** display on `/camera/camera/color/image_raw` and select **Best Effort**.
+
+To save a PNG of the active occupancy grid, stop driving and run `bash d435i.sh save` in another robot terminal. To export the database for Nav2, press **Ctrl+C** in the mapping terminal. Wait for the prompt, then run `bash d435i.sh export run3`. The run folder is `~/slam_hw/d435i_run3/`. The database is `d435i.db`. The offline export writes `d435i.pgm` and `d435i.yaml`. If you use both save methods, the final YAML refers to the last export.
+
+Use `bash d435i.sh odom` for visual odometry alone. The mapping command already starts this node. Use `--frame base_link` if the robot publishes its measured transform to `camera_link`. Add `--planar` to constrain odometry to a level floor. Use `bash d435i.sh camera --profile 640x480x15` to request the same resolution and frame rate for both streams if supported by the camera. Run `bash d435i.sh --help` for all options.

@@ -50,18 +50,7 @@ case "$mode" in
             lidar) exec ros2 launch velodyne velodyne-all-nodes-VLP16-launch.py ;;
             view) exec rviz2 -d "$HMI_PROJECT_DIR/config/vlp16_mapping.rviz" ;;
             export)
-                [[ -s "$db" ]] || die "Database missing or empty: $db"
-                exec 9<"$directory"
-                flock -n 9 || die 'Stop the mapper and wait for the terminal prompt before exporting'
-                command -v rtabmap-export >/dev/null || die 'Install the exporter with: sudo apt install ros-jazzy-rtabmap'
-                # Export into a fresh directory so an old image cannot pass the output check
-                staging=$(mktemp -d "$directory/.export-XXXXXX")
-                trap 'rm -rf -- "$staging"' EXIT
-                rtabmap-export --map --output_dir "$staging" "$db"
-                [[ -s "$staging/$run.pgm" && -s "$staging/$run.yaml" ]] || die 'RTAB-Map did not export an occupancy grid'
-                mv -- "$staging/$run.pgm" "$staging/$run.yaml" "$directory/"
-                echo "Nav2 map: $directory/$run.yaml"
-                exit 0 ;;
+                exec bash "$HMI_PROJECT_DIR/export_grid.sh" "$db" ;;
         esac ;;
 esac
 
