@@ -1,0 +1,64 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Global Options:
+    Fixed Frame: map
+    Frame Rate: 20
+  Displays:
+    - Class: rviz_default_plugins/Map
+      Name: Saved lab map
+      Enabled: true
+      Draw Behind: true
+      Topic:
+        Value: /map
+        Reliability Policy: Reliable
+        Durability Policy: Transient Local
+    - Class: rviz_default_plugins/LaserScan
+      Name: Live laser scan
+      Enabled: true
+      Size (Pixels): 3
+      Style: Points
+      Topic:
+        Value: /scan
+        Reliability Policy: Best Effort
+    - Class: rviz_default_plugins/Path
+      Name: Planned path
+      Enabled: true
+      Color: 0; 155; 255
+      Line Style: Billboards
+      Line Width: 0.065
+      Topic:
+        Value: /plan
+        Reliability Policy: Reliable
+    - Class: rviz_default_plugins/Odometry
+      Name: Travelled trajectory
+      Enabled: true
+      Keep: 400
+      Position Tolerance: 0.1
+      Angle Tolerance: 0.2
+      Covariance:
+        Value: false
+      Shape:
+        Value: Arrow
+        Color: 220; 55; 20
+        Shaft Length: 0.12
+        Shaft Radius: 0.025
+        Head Length: 0.08
+        Head Radius: 0.045
+      Topic:
+        Value: /odom
+        Reliability Policy: Best Effort
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/SetInitialPose
+      Topic:
+        Value: /initialpose
+    - Class: rviz_default_plugins/SetGoal
+      Topic:
+        Value: /goal_pose
+  Views:
+    Current:
+      Class: rviz_default_plugins/TopDownOrtho
+      Scale: 32
+      Target Frame: <Fixed Frame>
