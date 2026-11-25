@@ -24,22 +24,22 @@ case "${1:-}" in
     exec bash "$HMI_PROJECT_DIR/vlp16.sh" odom "$@"
     ;;
   nav)
-    if [[ $# != 3 ]]; then
-      echo 'Use: bash nav13.sh nav MAP.yaml ROBOT_RADIUS_METRES' >&2
+    if [[ $# != 3 && ( $# != 5 || $4 != --tf-wait ) ]]; then
+      echo 'Use: bash nav13.sh nav MAP.yaml ROBOT_RADIUS_METRES [--tf-wait SECONDS]' >&2
       exit 2
     fi
     map_file=$(realpath -e -- "$2")
     bringup=$(ros2 pkg prefix --share nav2_bringup)
     params=$(mktemp --suffix=.yaml)
     trap 'rm -f -- "$params"' EXIT
-    python3 - "$bringup/params/nav2_params.yaml" "$params" "$3" "$map_file" <<'PY'
+    python3 - "$bringup/params/nav2_params.yaml" "$params" "$3" "$map_file" "${5-}" <<'PY'
 import math
 import sys
 from pathlib import Path
 
 import yaml
 
-defaults, target, radius_text, map_file = sys.argv[1:]
+defaults, target, radius_text, map_file, tf_wait = sys.argv[1:]
 radius = float(radius_text)
 if not math.isfinite(radius) or radius <= 0:
     sys.exit("Enter the measured robot radius in metres")
@@ -78,6 +78,13 @@ for name in ("controller_server", "behavior_server", "bt_navigator", "velocity_s
 if "collision_monitor" in config:
     monitor = config["collision_monitor"]["ros__parameters"]
     monitor["base_frame_id"] = "base_link"
+    if tf_wait:
+        wait_seconds = float(tf_wait)
+        if not math.isfinite(wait_seconds) or wait_seconds <= 0:
+            sys.exit("--tf-wait must be a positive number of seconds")
+        monitor["transform_tolerance"] = wait_seconds
+elif tf_wait:
+    sys.exit("The Nav2 configuration has no collision_monitor")
 
 # Use the full-stick speed limits from the same file as start_base.sh
 joystick_config = yaml.safe_load(Path("config/week8_joystick.yaml").read_text())
