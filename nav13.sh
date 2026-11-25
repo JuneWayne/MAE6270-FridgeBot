@@ -70,7 +70,7 @@ if "voxel_layer" in local["plugins"]:
         "scan": layer["scan"],
     }
 
-# Match the motor interface and set initial limits for the first lab run
+# Use the velocity message type that the motor interface accepts
 for name in ("controller_server", "behavior_server", "bt_navigator", "velocity_smoother",
              "collision_monitor", "docking_server"):
     if name in config:
@@ -78,12 +78,21 @@ for name in ("controller_server", "behavior_server", "bt_navigator", "velocity_s
 if "collision_monitor" in config:
     monitor = config["collision_monitor"]["ros__parameters"]
     monitor["base_frame_id"] = "base_link"
+
+# Use the full-stick speed limits from the same file as start_base.sh
+joystick_config = yaml.safe_load(Path("config/week8_joystick.yaml").read_text())
+joystick = joystick_config["/joystick_teleop"]["ros__parameters"]
+linear_limit = abs(joystick["linear_scale"])
+turn_limit = abs(joystick["angular_scale"])
+if not math.isfinite(linear_limit) or not math.isfinite(turn_limit):
+    sys.exit("Joystick speed limits must be finite")
+
 smoother = config["velocity_smoother"]["ros__parameters"]
-smoother["max_velocity"] = [0.12, 0.0, 0.4]
-smoother["min_velocity"] = [-0.12, 0.0, -0.4]
+smoother["max_velocity"] = [linear_limit, 0.0, turn_limit]
+smoother["min_velocity"] = [-linear_limit, 0.0, -turn_limit]
 controller = config["controller_server"]["ros__parameters"]["FollowPath"]
 if "MPPIController" in controller["plugin"]:
-    controller.update(vx_max=0.12, vx_min=-0.12, wz_max=0.4)
+    controller.update(vx_max=linear_limit, vx_min=-linear_limit, wz_max=turn_limit)
 Path(target).write_text(yaml.safe_dump(config, sort_keys=False))
 PY
     ros2 launch nav2_bringup bringup_launch.py map:="$map_file" params_file:="$params" \
